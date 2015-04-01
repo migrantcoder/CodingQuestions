@@ -6,48 +6,59 @@
 using namespace std;
 using namespace maze;
 
-void test_no_exit()
+template <size_t R, size_t C>
+void test_generate_maze()
 {
-    room r1;
-    room r2;
-    room r0 = { {&r1, &r2} };
-
-    path result = find_exit(&r0);
-
-    assert(result.empty());
 }
 
-void test_3_deep()
+/// Test generate and find exit.
+template <size_t R, size_t C>
+void test(const size_t exit_row, const size_t exit_col)
 {
-    room r0010, r0011;
-    room r001 = { {&r0010, &r0011, exit_door} };
-    room r000, r002;
-    room r00 = { {&r000, &r001, &r002} };
-    room r01, r02;
-    room r0 = { {&r00, &r01, &r02} };
-    path control = { 0, 1, 2 };
+    auto maze = generate<R, C>(exit_row, exit_col);
 
-    path result = find_exit(&r0);
+    const size_t start_row = R - 1 - exit_row;
+    const size_t start_col = C - 1 - exit_col;
+    const bool found_exit = find_exit(maze, start_row, start_col);
+    
+    assert(found_exit);
 
-    assert(result == control);
-}
-
-void test_singleton()
-{
-
-    room r0 = { {exit_door} };
-    path control = { 0 };
-
-    path result = find_exit(&r0);
-
-    assert(result == control);
+    cout << R << "X" << C << " exit (" << exit_row << ", " << exit_col
+            << "), start from (" << start_row << ", " << start_col << ")"
+            << endl;
+    cout << maze;
+    cout << endl;
 }
 
 int main(int argc, char** argv)
 {
-    test_no_exit();
-    test_3_deep();
-    test_singleton();
+    test<1, 1>(0, 0);
+    
+    test<3, 4>(0, 0);
+    test<3, 4>(0, 3);
+    test<3, 4>(2, 0);
+    test<3, 4>(2, 3);
+    test<3, 4>(1, 2);
+
+    test<10, 10>(0, 0);
+    test<10, 10>(0, 9);
+    test<10, 10>(9, 0);
+    test<10, 10>(9, 9);
+
+    test<10, 10>(0, 0);
+    test<10, 10>(0, 9);
+    test<10, 10>(9, 0);
+    test<10, 10>(9, 9);
+
+    test<10, 10>(3, 5);
+    test<10, 10>(4, 7);
+
+    test<10, 10>(1, 1);
+    test<10, 10>(8, 8);
+    test<10, 10>(1, 8);
+    test<10, 10>(8, 1);
+
+    test<20, 30>(15, 20);
+
     return 0;
 }
-

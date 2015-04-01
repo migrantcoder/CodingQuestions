@@ -12,6 +12,12 @@ fi
 
 for d in `ls ${SRCDIR}`
 do
-    clang++ -ggdb3 -O2 --std=c++1y -I${SRCDIR} -Wall -Wpedantic -o ${BUILDDIR}/${d}-example $(find ${SRCDIR}/${d} -name *.cpp)
+    clang++ -ggdb3 -O0 --std=c++1y -I${SRCDIR} -Wall -Wpedantic -o ${BUILDDIR}/${d}-example $(find ${SRCDIR}/${d} -name *.cpp)
+    let rc=$?
+    if [ "$rc" -ne "0" ]
+    then
+        exit $rc
+    fi
 done
 
+exit 0
