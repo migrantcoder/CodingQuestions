@@ -90,7 +90,6 @@ std::string to_string(direction d)
         return "right";
     assert(d = left);
     return "left";
-
 }
 
 /// \return the reverse of the specified direction \c d.
@@ -150,12 +149,10 @@ maze<R, C> generate(size_t exit_row, size_t exit_col)
     assert(exit_row < R && exit_col < C);
 
     maze<R, C> m;
-
     m[exit_row][exit_col].exit(true);
     generate_rec(m, exit_row, exit_col);
 
-    // Clear visited rooms.
-    foreach_room(m, [] (room& r) { r.visited(false); });
+    foreach_room(m, [] (room& r) { r.visited(false); }); // Clear visit marks.
 
     return m;
 }
@@ -168,8 +165,6 @@ maze<R, C> generate(size_t exit_row, size_t exit_col)
 template <size_t R, size_t C>
 void generate_rec(maze<R, C>& m, const size_t row, const size_t col)
 {
-    using namespace std;
-
     const auto directions = get_shuffled_directions();
     room& current = m[row][col];
     current.visited(true);
@@ -204,11 +199,9 @@ void generate_rec(maze<R, C>& m, const size_t row, const size_t col)
 template <size_t R, size_t C>
 void foreach_room(maze<R, C>& m, const std::function<void (room&)>& f)
 {
-    for (size_t r = 0; r < R; ++r) {
-        for (size_t c = 0; c < C; ++c) {
+    for (size_t r = 0; r < R; ++r)
+        for (size_t c = 0; c < C; ++c)
             f(m[r][c]);
-        }
-    }
 }
 
 template <size_t R, size_t C>
@@ -276,14 +269,10 @@ path find_path(maze<R, C>& m, const size_t row, const size_t col)
 template <size_t R, size_t C>
 path find_path_rec(maze<R, C>& m, const size_t row, const size_t col)
 {
-    using namespace std;
-
-    static const array<direction, 4> directions = {{ up, right, down, left }};
-
     room& r = m[row][col];
     r.visited(true);
 
-    for (auto direction : directions) {
+    for (auto direction : {up, right, down, left}) {
         if (!r.has_door(direction))
             continue;
 
@@ -295,7 +284,7 @@ path find_path_rec(maze<R, C>& m, const size_t row, const size_t col)
         if (next.exit())
             return { direction };                           // Stop.
         if (next.visited())
-            continue;
+            continue;                                       // Skip.
 
         auto path = find_path_rec(m, next_row, next_col);   // Recurse.
         if (!path.empty()) {
