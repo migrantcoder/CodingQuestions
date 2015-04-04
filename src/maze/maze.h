@@ -14,7 +14,7 @@
 /// objects.  The first (zeroeth) row is the top of the maze and the first
 /// (zeroeth) columns is the left of the maze.
 ///
-/// Each room object indicates whether it has doors to any of to the up, right,
+/// Each room object indicates whether it has doors to any of its up, right,
 /// down and left neighbours.  Rooms track other metadata, such as whether they
 /// have been visited during or are on a path.
 ///
@@ -26,14 +26,17 @@
 ///
 /// Find Exit
 ///
-/// A recursive depth first search is used to find the exit room from the
-/// specified start room.  Each room on the path is marked.
+/// A recursive depth first search is used to find a path to the exit from the
+/// specified start room.  A separate mark path function will mark the path on
+/// the grid.
 
 #pragma once
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cstdint>
+#include <deque>
 #include <iosfwd>
 #include <list>
 #include <random>
@@ -55,6 +58,12 @@ std::array<direction, 4> get_shuffled_directions()
     shuffle(begin(directions), end(directions), generator);
     return directions;
 }
+
+/// Maze path.
+using path = std::deque<direction>;
+
+/// Maze grid coordinates, row first and column second.
+using coord = std::pair<size_t, size_t>;
 
 /// \return row and column deltas to move in the specified direction.
 std::pair<int, int> delta(direction d)
@@ -100,7 +109,10 @@ direction reverse(direction d)
 /// Maze room containing door directions and visit and path metadata.
 class room {
 public:
-    room() : doors_(0), exit_(0), visited_(0), exit_path_(0) {}
+    room() : doors_(0), exit_(0),  path_(0), visited_(0) {}
+    room(const room&);
+    room& operator=(const room&);
+    ~room() = default;
 
     void add_door(direction d) { doors_ |= d; }
     bool has_door(direction d) const { return doors_ & d; }
@@ -108,14 +120,15 @@ public:
     bool exit() const { return exit_; }
     void visited(bool visited) { visited_ = visited; }
     bool visited() const { return visited_; }
-    void exit_path(bool exit_path) { exit_path_ = exit_path; }
-    bool exit_path() const { return exit_path_; }
+    void path(bool path) { path_ = path; }
+    bool path() const { return path_; }
 
 private:
-    unsigned int doors_:4;      /// Bitfield for directional doors' existence.
+    unsigned int doors_:4;      /// Bitfield for doors.
     unsigned int exit_:1;       /// Node is the exit.
-    unsigned int visited_:1;    /// Node visited during maze generation.
-    unsigned int exit_path_:1;  /// Node on exit path.
+    unsigned int path_:1;       /// Node on path.
+    unsigned int visited_:1;    /// Node visited.
+
 };
 
 /// A maze is an R(ows) by C(olumns) grid of rooms.
@@ -123,6 +136,7 @@ template <size_t R, size_t C> using maze = std::array<std::array<room,C>, R>;
 
 // Forward declarations.
 template <size_t R, size_t C> void generate_rec(maze<R, C>&, size_t, size_t);
+template <size_t R, size_t C> path find_path_rec(maze<R, C>& m, size_t, size_t);
 template <size_t R, size_t C> void foreach_room(maze<R, C>&, const std::function<void (room&)>&);
 
 /// Generate a maze in a R(ows) by C(olumns) grid.
@@ -221,7 +235,7 @@ std::ostream& operator<<(std::ostream& os, const maze<R, C>& m)
 
             if (room.exit()) {
                 os << "X";
-            } else if (room.exit_path()) {
+            } else if (room.path()) {
                 os << "*";
             } else {
                 os <<  " ";
@@ -244,30 +258,29 @@ std::ostream& operator<<(std::ostream& os, const maze<R, C>& m)
 
 /// Find a path to the exit starting at the specified room.
 ///
-/// \note Recursive implementation. Limited by call stack size.
+/// \note Recursive implementation.  Limited by call stack size.
 ///
 /// \param maze
 /// \param row current/start room row co-ordinate.
 /// \param col current/start room column co-ordinate.
-/// \return \c true iff the exit was found.
-///
-/// \post \c maze is modified by the marking of rooms on the discovered path to
-/// the exit.
+/// \return the path to the exit from the specified start.
+/// \return the path to the exit from the specified start.
 template <size_t R, size_t C>
-bool find_exit(maze<R, C>& m, const size_t row, const size_t col)
+path find_path(maze<R, C>& m, const size_t row, const size_t col)
+{
+    auto path = find_path_rec(m, row, col);
+    foreach_room(m, [] (room& r) { r.visited(false); }); // Clear visited marks.
+    return path;
+}
+
+template <size_t R, size_t C>
+path find_path_rec(maze<R, C>& m, const size_t row, const size_t col)
 {
     using namespace std;
 
     static const array<direction, 4> directions = {{ up, right, down, left }};
 
     room& r = m[row][col];
-
-    // Successful base case.
-    if (r.exit()) {
-        r.exit_path(true);
-        return true;
-    }
-
     r.visited(true);
 
     for (auto direction : directions) {
@@ -277,17 +290,51 @@ bool find_exit(maze<R, C>& m, const size_t row, const size_t col)
         const auto d = delta(direction);
         const int next_row = row + d.first;
         const int next_col = col + d.second;
+        const auto& next = m[next_row][next_col];
 
-        if (m[next_row][next_col].visited())
+        if (next.exit())
+            return { direction };                           // Stop.
+        if (next.visited())
             continue;
 
-        if (find_exit(m, next_row, next_col)) {
-            r.exit_path(true);
-            return true;
+        auto path = find_path_rec(m, next_row, next_col);   // Recurse.
+        if (!path.empty()) {
+            path.push_front(direction);
+            return path;
         }
     }
 
-    return false;
+    return {};
+}
+
+/// Mark the path.
+///
+/// \param maze A maze with an exit.
+/// \param path A valid path to the exit.
+///
+/// \post \c maze is modified by marking rooms on the path exit.
+template <size_t R, size_t C>
+void mark_path(
+        maze<R, C>& m,
+        const path& path,
+        size_t row,
+        size_t col)
+{
+    using namespace std;
+
+    assert(row < R && col < C);
+
+    m[row][col].path(true);
+    for (const auto& direction : path) {
+        const auto d = delta(direction);
+        row += d.first;
+        col += d.second;
+        m[row][col].path(true);
+
+        assert(row < R && col < C);
+    }
+
+    assert(m[row][col].exit());
 }
 
 } // namespace maze
