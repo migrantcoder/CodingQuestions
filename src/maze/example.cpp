@@ -31,6 +31,9 @@ int main(int argc, char** argv)
 
     cout << ROWS << "X" << COLUMNS << ", exit (" << exit_row << ", " << exit_col
             << "), start (" << start_row << ", " << start_col << ")" << endl;
+    cout << "path: ";
+    for (size_t i = 0; i < path.size(); ++i)
+        cout << to_string(path[i]) << (i < path.size() - 1 ? ", " : "\n");
     cout << maze << endl;
 
     return 0;

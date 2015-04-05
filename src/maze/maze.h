@@ -55,13 +55,13 @@ std::pair<int, int> delta(direction d)
 std::string to_string(direction d)
 {
     if (d == up)
-        return "up";
+        return "u";
     if (d == down)
-        return "down";
+        return "d";
     if (d == right)
-        return "right";
+        return "r";
     assert(d = left);
-    return "left";
+    return "l";
 }
 
 /// \return the reverse of the specified direction \c d.
