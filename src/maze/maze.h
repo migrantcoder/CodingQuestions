@@ -1,34 +1,9 @@
 // vim: set ts=4 sw=4 tw=80 expandtab
 // Copyright 2015 Migrant Coder
 
-/// Generate and Explore a Maze
+/// Maze
 ///
-/// Definition
-///
-/// A maze is a grid of 4 sided rooms that may be connected to their neighbours
-/// by doors.  One room is marked as the exit
-///
-/// Generation & Representation
-///
-/// The maze is represented by a 2-dimensional (row by columns) array of room
-/// objects.  The first (zeroeth) row is the top of the maze and the first
-/// (zeroeth) columns is the left of the maze.
-///
-/// Each room object indicates whether it has doors to any of its up, right,
-/// down and left neighbours.  Rooms track other metadata, such as whether they
-/// have been visited during or are on a path.
-///
-/// To generate a maze, start at a specified exit room.  Perform a depth first
-/// exploration of the grid marking nodes as visited as they are encountered and
-/// creating doors between the rooms being traversed.  Backtrack when no move
-/// can be made from the current room, the room is surrounded by maze edges and
-/// visited rooms.
-///
-/// Find Exit
-///
-/// A recursive depth first search is used to find a path to the exit from the
-/// specified start room.  A separate mark path function will mark the path on
-/// the grid.
+/// See README for problem and solution description.
 
 #pragma once
 
@@ -37,10 +12,7 @@
 #include <cassert>
 #include <cstdint>
 #include <deque>
-#include <iosfwd>
-#include <list>
 #include <random>
-#include <vector>
 
 namespace maze {
 
@@ -109,14 +81,16 @@ direction reverse(direction d)
 class room {
 public:
     room() : doors_(0), exit_(0),  path_(0), visited_(0) {}
-    room(const room&);
-    room& operator=(const room&);
+    room(const room&) = default;
+    room& operator=(const room&) = default;
     ~room() = default;
 
     void add_door(direction d) { doors_ |= d; }
     bool has_door(direction d) const { return doors_ & d; }
     void exit(bool exit) { exit_ = exit; }
     bool exit() const { return exit_; }
+    void start(bool start) { start_ = start; }
+    bool start() const { return start_; }
     void visited(bool visited) { visited_ = visited; }
     bool visited() const { return visited_; }
     void path(bool path) { path_ = path; }
@@ -125,6 +99,7 @@ public:
 private:
     unsigned int doors_:4;      /// Bitfield for doors.
     unsigned int exit_:1;       /// Node is the exit.
+    unsigned int start_:1;      /// Node is the path start.
     unsigned int path_:1;       /// Node on path.
     unsigned int visited_:1;    /// Node visited.
 
@@ -137,6 +112,7 @@ template <size_t R, size_t C> using maze = std::array<std::array<room,C>, R>;
 template <size_t R, size_t C> void generate_rec(maze<R, C>&, size_t, size_t);
 template <size_t R, size_t C> path find_path_rec(maze<R, C>& m, size_t, size_t);
 template <size_t R, size_t C> void foreach_room(maze<R, C>&, const std::function<void (room&)>&);
+template <size_t R, size_t C> void clear_path_and_visited(maze<R, C>&);
 
 /// Generate a maze in a R(ows) by C(olumns) grid.
 ///
@@ -151,8 +127,7 @@ maze<R, C> generate(size_t exit_row, size_t exit_col)
     maze<R, C> m;
     m[exit_row][exit_col].exit(true);
     generate_rec(m, exit_row, exit_col);
-
-    foreach_room(m, [] (room& r) { r.visited(false); }); // Clear visit marks.
+    clear_path_and_visited(m);
 
     return m;
 }
@@ -199,9 +174,21 @@ void generate_rec(maze<R, C>& m, const size_t row, const size_t col)
 template <size_t R, size_t C>
 void foreach_room(maze<R, C>& m, const std::function<void (room&)>& f)
 {
-    for (size_t r = 0; r < R; ++r)
+   for (size_t r = 0; r < R; ++r)
         for (size_t c = 0; c < C; ++c)
             f(m[r][c]);
+}
+
+template <size_t R, size_t C>
+void clear_path_and_visited(maze<R, C>& m)
+{
+    foreach_room(
+            m,
+            [] (room& r) {
+                r.path(false);
+                r.start(false);
+                r.visited(false);
+            });
 }
 
 template <size_t R, size_t C>
@@ -228,6 +215,8 @@ std::ostream& operator<<(std::ostream& os, const maze<R, C>& m)
 
             if (room.exit()) {
                 os << "X";
+            } else if (room.start()) {
+                os << "S";
             } else if (room.path()) {
                 os << "*";
             } else {
@@ -257,12 +246,11 @@ std::ostream& operator<<(std::ostream& os, const maze<R, C>& m)
 /// \param row current/start room row co-ordinate.
 /// \param col current/start room column co-ordinate.
 /// \return the path to the exit from the specified start.
-/// \return the path to the exit from the specified start.
 template <size_t R, size_t C>
-path find_path(maze<R, C>& m, const size_t row, const size_t col)
+path find_path(const maze<R, C>& m, const size_t row, const size_t col)
 {
-    auto path = find_path_rec(m, row, col);
-    foreach_room(m, [] (room& r) { r.visited(false); }); // Clear visited marks.
+    auto copy = m;
+    auto path = find_path_rec(copy, row, col);
     return path;
 }
 
@@ -271,6 +259,9 @@ path find_path_rec(maze<R, C>& m, const size_t row, const size_t col)
 {
     room& r = m[row][col];
     r.visited(true);
+
+    if (r.exit())
+        return {};
 
     for (auto direction : {up, right, down, left}) {
         if (!r.has_door(direction))
@@ -313,6 +304,7 @@ void mark_path(
 
     assert(row < R && col < C);
 
+    m[row][col].start(true);
     m[row][col].path(true);
     for (const auto& direction : path) {
         const auto d = delta(direction);

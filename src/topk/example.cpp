@@ -1,7 +1,5 @@
-// vim: set ts=4 sw=4 tw=132 expandtab
+// vim: set ts=4 sw=4 tw=80 expandtab
 // Copyright 2014 Migrant Coder 
-
-/// Generate N elements with ratings and print the top K ranked elements in ascending order.
 
 #include <topk/topk.h>
 
@@ -25,7 +23,10 @@ std::unique_ptr<element[]> generate(const size_t n)
     return es;
 }
 
-/// Run an example. N elements with random scores are generated. The top K rated elements are printed in descending order.
+/// Run example. 
+///
+/// N elements with random scores are generated. The top K rated elements are
+/// printed in descending order.
 ///
 /// \pre N > K
 /// \param N The total number of elements.

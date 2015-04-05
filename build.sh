@@ -10,14 +10,28 @@ then
     mkdir $BUILDDIR
 fi
 
-for d in `ls ${SRCDIR}`
+for subdir in `ls ${SRCDIR}`
 do
-    clang++ -ggdb3 -O0 --std=c++1y -I${SRCDIR} -Wall -Wpedantic -o ${BUILDDIR}/${d}-example $(find ${SRCDIR}/${d} -name *.cpp)
-    let rc=$?
-    if [ "$rc" -ne "0" ]
-    then
-        exit $rc
-    fi
+    pushd ${SRCDIR}/$subdir > /dev/null
+    for srcfile in `ls *.cpp`
+    do
+        srcfile_basename=$(basename ${srcfile} .cpp)
+        output_name="${subdir}-${srcfile_basename}"
+        echo -n "building ${srcfile} to ${output_name} ... "
+        clang++ \
+            -ggdb3 -Wall -Wpedantic -O1 --std=c++1y \
+            -I../../${SRCDIR} \
+            -o ../../${BUILDDIR}/${output_name} \
+            ${srcfile}
+        rc=$?
+        if [ "$rc" -ne "0" ]
+        then
+            popd > /dev/null
+            exit $rc
+        fi
+        echo "done"
+    done
+    popd > /dev/null
 done
 
 exit 0

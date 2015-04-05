@@ -1,0 +1,29 @@
+Generate and Explore a Maze
+
+Definition
+
+A maze is a grid of 4 sided rooms that may be connected to their neighbours
+by doors.  One room is marked as the exit
+
+Generation & Representation
+
+The maze is represented by a 2-dimensional (row by columns) array of room
+objects.  The first (zeroeth) row is the top of the maze and the first
+(zeroeth) columns is the left of the maze.
+
+Each room object indicates whether it has doors to any of its up, right,
+down and left neighbours.  Rooms track other metadata, such as whether they
+have been visited during or are on a path.
+
+To generate a maze, start at a specified exit room.  Perform a depth first
+exploration of the grid marking nodes as visited as they are encountered and
+creating doors between the rooms being traversed.  Backtrack when no move
+can be made from the current room, the room is surrounded by maze edges and
+visited rooms.
+
+Find Exit
+
+A recursive depth first search is used to find a path to the exit from the
+specified start room.  A separate mark path function will mark the path on
+the grid.
+

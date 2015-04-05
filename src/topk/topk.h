@@ -3,15 +3,9 @@
 
 /// Top K
 ///
-/// The problem:
-///     Return the top K rated elements in descending order given N elements in arbitrary order.
-///
-/// Solutions:
-///     O(n * log(k)) - Use a minimum heap to track top K.
-///     O(n * log(n)) - Sort all elements.
+/// See README for problem and solution description.
 
-#ifndef TOPK_TOPK_H
-#define TOPK_TOPK_H
+#pragma once
 
 #include <algorithm>
 #include <cassert>
@@ -64,6 +58,8 @@ std::vector<element> topk(const element* const es, const size_t n, const size_t 
 typedef decltype(topk) topk_t;
 
 /// Implement \c topk using a priority queue to track top K.
+///
+/// Runtime O(n) = n log k.
 std::vector<element> topk_by_pq(const element* const es, const size_t n, const size_t k)
 {
     using namespace std;
@@ -92,6 +88,8 @@ std::vector<element> topk_by_pq(const element* const es, const size_t n, const s
 }
 
 /// Implement \c topk by sorting all N elements.
+///
+/// Runtime O(n) = n log n.
 std::vector<element> topk_by_sort(const element* const es, const size_t n, const size_t k)
 {
     using namespace std;
@@ -108,5 +106,3 @@ std::vector<element> topk_by_sort(const element* const es, const size_t n, const
 }
 
 }   // namespace topk
-
-#endif // TOPK_TOPK_H

@@ -16,11 +16,10 @@ maze<R, C> example(const size_t exit_row, const size_t exit_col)
     const auto path = find_path(maze, start_row, start_col);
     mark_path(maze, path, start_row, start_col);
 
-    cout << R << "X" << C << " exit (" << exit_row << ", " << exit_col
-            << "), start from (" << start_row << ", " << start_col << ")"
+    cout << R << "X" << C << ", exit (" << exit_row << ", " << exit_col
+            << "), start (" << start_row << ", " << start_col << ")"
             << endl;
-    cout << maze;
-    cout << endl;
+    cout << maze << endl;
 
     return maze;
 }
@@ -53,8 +52,6 @@ static void test()
     example<10, 10>(8, 8);
     example<10, 10>(1, 8);
     example<10, 10>(8, 1);
-
-    example<20, 30>(15, 20);
 }
 
 int main(int argc, char** argv)

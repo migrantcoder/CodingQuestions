@@ -1,0 +1,11 @@
+Top K
+
+The Problem
+
+Return the top K rated elements in descending order given N elements in
+arbitrary order.
+
+Solutions
+
+O(n * log(k)) - Use a minimum heap to track top K.
+O(n * log(n)) - Sort all elements.
