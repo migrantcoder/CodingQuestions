@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <maze/generate.h>
 #include <maze/maze.h>
 
 using namespace std;
@@ -9,16 +10,15 @@ using namespace maze;
 template <size_t R, size_t C>
 maze<R, C> example(const size_t exit_row, const size_t exit_col)
 {
-    const size_t start_row = R - 1 - exit_row;
-    const size_t start_col = C - 1 - exit_col;
+    const coord start = {R - 1 - exit_row, C - 1 - exit_col};
+    const coord exit = {exit_row, exit_col};
 
-    auto maze = generate<R, C>(exit_row, exit_col);
-    const auto path = find_path(maze, start_row, start_col);
-    mark_path(maze, path, start_row, start_col);
 
-    cout << R << "X" << C << ", exit (" << exit_row << ", " << exit_col
-            << "), start (" << start_row << ", " << start_col << ")"
-            << endl;
+    auto maze = generate<R, C>(exit);
+    const auto path = find_path(maze, start);
+    mark_path(maze, path);
+
+    cout << R << "X" << C << ", exit " << exit << ", start " << start << endl;
     cout << maze << endl;
 
     return maze;

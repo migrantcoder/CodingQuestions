@@ -12,6 +12,8 @@
 #include <cassert>
 #include <cstdint>
 #include <deque>
+#include <iosfwd>
+#include <list>
 #include <random>
 
 namespace maze {
@@ -31,25 +33,32 @@ std::array<direction, 4> get_shuffled_directions()
     return directions;
 }
 
-/// Maze path.
-using path = std::deque<direction>;
+/// Grid coordinates.
+struct coord {
+    size_t row;
+    size_t col;
 
-/// Maze grid coordinates, row first and column second.
-using coord = std::pair<size_t, size_t>;
+    friend std::ostream& operator<<(std::ostream&, const coord&);
+};
+
+std::ostream& operator<<(std::ostream& o, const coord& c)
+{
+    return o << '(' << c.row << "," << c.col << ')';
+}
+
+/// Maze path.
+using path = std::list<coord>;
 
 /// \return row and column deltas to move in the specified direction.
 std::pair<int, int> delta(direction d)
 {
-    using namespace std;
-
     if (d == up)
-        return make_pair(-1, 0);
+        return {-1, 0};
     if (d == down)
-        return make_pair(1, 0);
+        return {1, 0};
     if (d == right)
-        return make_pair(0, 1);
-    assert(d = left);
-    return make_pair(0, -1);
+        return {0, 1};
+    return {0, -1};
 }
 
 std::string to_string(direction d)
@@ -73,7 +82,6 @@ direction reverse(direction d)
         return up;
     if (d == right)
         return left;
-    assert(d = left);
     return right;
 }
 
@@ -102,73 +110,15 @@ private:
     unsigned int start_:1;      /// Node is the path start.
     unsigned int path_:1;       /// Node on path.
     unsigned int visited_:1;    /// Node visited.
-
 };
 
 /// A maze is an R(ows) by C(olumns) grid of rooms.
 template <size_t R, size_t C> using maze = std::array<std::array<room,C>, R>;
 
 // Forward declarations.
-template <size_t R, size_t C> void generate_rec(maze<R, C>&, size_t, size_t);
-template <size_t R, size_t C> path find_path_rec(maze<R, C>& m, size_t, size_t);
+template <size_t R, size_t C> path find_path_rec(maze<R, C>& m, const coord&);
 template <size_t R, size_t C> void foreach_room(maze<R, C>&, const std::function<void (room&)>&);
 template <size_t R, size_t C> void clear_path_and_visited(maze<R, C>&);
-
-/// Generate a maze in a R(ows) by C(olumns) grid.
-///
-/// \param exit_row the exit room's row.
-/// \param exit_col the exit room's column.
-/// \return a grid containing the generated maze.
-template <size_t R, size_t C>
-maze<R, C> generate(size_t exit_row, size_t exit_col)
-{
-    assert(exit_row < R && exit_col < C);
-
-    maze<R, C> m;
-    m[exit_row][exit_col].exit(true);
-    generate_rec(m, exit_row, exit_col);
-    clear_path_and_visited(m);
-
-    return m;
-}
-
-/// Generate a maze recusrive exploration and backtracking.
-///
-/// \param m the maze grid.
-/// \param row the row co-ordinate of the current room.
-/// \param col the column co-ordinate of the current room.
-template <size_t R, size_t C>
-void generate_rec(maze<R, C>& m, const size_t row, const size_t col)
-{
-    const auto directions = get_shuffled_directions();
-    room& current = m[row][col];
-    current.visited(true);
-
-    // For each neighbour ...
-    for (const auto& direction : directions) {
-        const auto d = delta(direction);
-        const int next_row = row + d.first;
-        const int next_col = col + d.second;
-
-        // Only visit a valid, unvisited neighbour.
-        if (!(next_row >= 0 && next_row < R && next_col >= 0 && next_col < C)) {
-            continue;
-        }
-
-        // Only visit an unvisited neighbour.
-        room& next = m[next_row][next_col];
-        if (next.visited()) {
-            continue;
-        }
-
-        // Create doors (bi-directional) to extend the maze.
-        current.add_door(direction);
-        next.add_door(reverse(direction));
-
-        // Recurse ...
-        generate_rec(m, next_row, next_col);
-    }
-}
 
 /// For all rooms.
 template <size_t R, size_t C>
@@ -179,6 +129,7 @@ void foreach_room(maze<R, C>& m, const std::function<void (room&)>& f)
             f(m[r][c]);
 }
 
+/// Clear path membership and visited flags in every room in the maze.
 template <size_t R, size_t C>
 void clear_path_and_visited(maze<R, C>& m)
 {
@@ -243,44 +194,40 @@ std::ostream& operator<<(std::ostream& os, const maze<R, C>& m)
 /// \note Recursive implementation.  Limited by call stack size.
 ///
 /// \param maze
-/// \param row current/start room row co-ordinate.
-/// \param col current/start room column co-ordinate.
+/// \param current current/start room co-ordinates.
 /// \return the path to the exit from the specified start.
 template <size_t R, size_t C>
-path find_path(const maze<R, C>& m, const size_t row, const size_t col)
+path find_path(const maze<R, C>& m, const coord& current)
 {
     auto copy = m;
-    auto path = find_path_rec(copy, row, col);
+    auto path = find_path_rec(copy, current);
     return path;
 }
 
 template <size_t R, size_t C>
-path find_path_rec(maze<R, C>& m, const size_t row, const size_t col)
+path find_path_rec(maze<R, C>& m, const coord& current)
 {
-    room& r = m[row][col];
+    room& r = m[current.row][current.col];
     r.visited(true);
 
     if (r.exit())
-        return {};
+        return {current};                                   // Stop.
 
     for (auto direction : {up, right, down, left}) {
         if (!r.has_door(direction))
             continue;
 
         const auto d = delta(direction);
-        const int next_row = row + d.first;
-        const int next_col = col + d.second;
-        const auto& next = m[next_row][next_col];
+        const coord next = {current.row + d.first, current.col + d.second};
+        const auto& next_room = m[next.row][next.col];
 
-        if (next.exit())
-            return { direction };                           // Stop.
-        if (next.visited())
+        if (next_room.visited())
             continue;                                       // Skip.
 
-        auto path = find_path_rec(m, next_row, next_col);   // Recurse.
-        if (!path.empty()) {
-            path.push_front(direction);
-            return path;
+        path p = find_path_rec(m, next);                    // Recurse.
+        if (!p.empty()) {
+            p.push_front(current);
+            return p;
         }
     }
 
@@ -294,28 +241,12 @@ path find_path_rec(maze<R, C>& m, const size_t row, const size_t col)
 ///
 /// \post \c maze is modified by marking rooms on the path exit.
 template <size_t R, size_t C>
-void mark_path(
-        maze<R, C>& m,
-        const path& path,
-        size_t row,
-        size_t col)
+void mark_path(maze<R, C>& m, const path& path)
 {
-    using namespace std;
-
-    assert(row < R && col < C);
-
-    m[row][col].start(true);
-    m[row][col].path(true);
-    for (const auto& direction : path) {
-        const auto d = delta(direction);
-        row += d.first;
-        col += d.second;
-        m[row][col].path(true);
-
-        assert(row < R && col < C);
-    }
-
-    assert(m[row][col].exit());
+    if (!path.empty())
+        m[path.front().row][path.front().col].start(true);
+    for (const auto& room : path)
+        m[room.row][room.col].path(true);
 }
 
 } // namespace maze

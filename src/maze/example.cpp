@@ -1,5 +1,7 @@
 #include <iostream>
+#include <sstream>
 
+#include <maze/generate.h>
 #include <maze/maze.h>
 
 using namespace std;
@@ -7,6 +9,14 @@ using namespace maze;
 
 #define ROWS 20
 #define COLUMNS 30
+
+size_t strtosize(const char*  const s)
+{
+    std::istringstream is(s);
+    size_t size;
+    is >> size;
+    return size;
+}
 
 int main(int argc, char** argv)
 {
@@ -20,20 +30,18 @@ int main(int argc, char** argv)
         fprintf(stderr, USAGE, argv[0], ROWS, COLUMNS, ROWS, COLUMNS);
         return 1;
     }
-    const size_t exit_row = atoi(argv[1]);
-    const size_t exit_col = atoi(argv[2]);
-    const size_t start_row = atoi(argv[3]);
-    const size_t start_col = atoi(argv[4]);
+    const coord exit = {strtosize(argv[1]), strtosize(argv[2])};
+    const coord start = {strtosize(argv[3]), strtosize(argv[4])};
 
-    auto maze = generate<ROWS, COLUMNS>(exit_row, exit_col);
-    const auto path = find_path(maze, start_row, start_col);
-    mark_path(maze, path, start_row, start_col);
+    auto maze = generate<ROWS, COLUMNS>(exit);
+    const auto path = find_path(maze, start);
+    mark_path(maze, path);
 
-    cout << ROWS << "X" << COLUMNS << ", exit (" << exit_row << ", " << exit_col
-            << "), start (" << start_row << ", " << start_col << ")" << endl;
+    cout << ROWS << "X" << COLUMNS << ", exit " << exit << ", start " << start << endl;
     cout << "path: ";
-    for (size_t i = 0; i < path.size(); ++i)
-        cout << to_string(path[i]) << (i < path.size() - 1 ? ", " : "\n");
+    for (const coord& c : path)
+        cout << c << ' ';
+    cout << endl;
     cout << maze << endl;
 
     return 0;
