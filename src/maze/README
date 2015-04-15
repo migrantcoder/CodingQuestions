@@ -1,29 +1,28 @@
 Generate and Explore a Maze
 
-Definition
+Problem Definition
 
-A maze is a grid of 4 sided rooms that may be connected to their neighbours
-by doors.  One room is marked as the exit
+A maze is a grid of 4 sided rooms. Rooms may be connected to their neighbours by
+doors.  One room is an exit.  Implement functions to generate a maze, find a
+path from a specified start room to the exit, mark a path, and print a maze
+(including indicating the exit) and a path if marked.
 
-Generation & Representation
+Representation
 
 The maze is represented by a 2-dimensional (row by columns) array of room
-objects.  The first (zeroeth) row is the top of the maze and the first
-(zeroeth) columns is the left of the maze.
+objects.  The first row is the top of the maze and the first column is the left
+of the maze.
 
-Each room object indicates whether it has doors to any of its up, right,
-down and left neighbours.  Rooms track other metadata, such as whether they
-have been visited during or are on a path.
+Each room object has a bitfield indicating whether it has doors to any of its
+up, right, down and left neighbours.  A room object may also be marked as being
+the exit, the start of a path to the exit and being on the path to the exit.
 
-To generate a maze, start at a specified exit room.  Perform a depth first
-exploration of the grid marking nodes as visited as they are encountered and
-creating doors between the rooms being traversed.  Backtrack when no move
-can be made from the current room, the room is surrounded by maze edges and
-visited rooms.
+Solution
 
-Find Exit
+To generate a maze, start at the specified exit room.  Perform a depth first
+exploration of the grid tracking visited rooms and creating doors between the
+rooms being traversed.  Backtrack when no move can be made from the current
+room, i.e. the room is surrounded by maze edges and visited rooms.
 
-A recursive depth first search is used to find a path to the exit from the
-specified start room.  A separate mark path function will mark the path on
-the grid.
-
+Recursive and iterative implementations of depth first search are used to find
+a path to the exit from the specified start room.

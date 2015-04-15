@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <maze/find-path.h>
 #include <maze/generate.h>
 #include <maze/maze.h>
 
@@ -15,10 +16,15 @@ maze<R, C> example(const size_t exit_row, const size_t exit_col)
 
 
     auto maze = generate<R, C>(exit);
-    const auto path = find_path(maze, start);
-    mark_path(maze, path);
+    const auto path_recursive = find_path_recursive(maze, start, exit);
+    const auto path_iterative = find_path_iterative(maze, start, exit);
+    assert(path_recursive == path_iterative);
+    mark_path(maze, path_recursive);
 
-    cout << R << "X" << C << ", exit " << exit << ", start " << start << endl;
+    cout << "size: " << R << "X" << C << endl;
+    cout << "exit: " << exit << endl;
+    cout << "start: " << start << endl;
+    cout << "maze: " << endl;
     cout << maze << endl;
 
     return maze;

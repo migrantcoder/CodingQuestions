@@ -25,9 +25,8 @@ maze<R, C> generate(const coord& exit)
 
     maze<R, C> m;
     m[exit.row][exit.col].exit(true);
-    generate_rec(m, exit);
-    clear_path_and_visited(m);
-
+    std::set<coord> visited;
+    generate_rec(m, exit, visited);
     return m;
 }
 
@@ -36,11 +35,11 @@ maze<R, C> generate(const coord& exit)
 /// \param m the maze grid.
 /// \param current the co-ordinates of the current room.
 template <size_t R, size_t C>
-void generate_rec(maze<R, C>& m, const coord& current)
+void generate_rec(maze<R, C>& m, const coord& current, std::set<coord>& visited)
 {
     const auto directions = get_shuffled_directions();
     room& current_room = m[current.row][current.col];
-    current_room.visited(true);
+    visited.insert(current);
 
     // For each neighbour ...
     for (const auto& direction : directions) {
@@ -58,16 +57,15 @@ void generate_rec(maze<R, C>& m, const coord& current)
 
         // Only visit an unvisited neighbour.
         room& next_room = m[next.row][next.col];
-        if (next_room.visited()) {
+        if (visited.find(next) != std::end(visited))
             continue;
-        }
 
         // Create doors (bi-directional) to extend the maze.
         current_room.add_door(direction);
         next_room.add_door(reverse(direction));
 
         // Recurse ...
-        generate_rec(m, next);
+        generate_rec(m, next, visited);
     }
 }
 

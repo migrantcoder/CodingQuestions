@@ -18,6 +18,10 @@
 
 namespace maze {
 
+// Forward declarations.
+struct coord;
+std::ostream& operator<<(std::ostream&, const coord&);
+
 /// Directions.
 enum direction: uint8_t { up = 1, right = 2, down = 4, left = 8 };
 
@@ -37,9 +41,17 @@ std::array<direction, 4> get_shuffled_directions()
 struct coord {
     size_t row;
     size_t col;
-
-    friend std::ostream& operator<<(std::ostream&, const coord&);
 };
+
+bool operator==(const coord& lhs, const coord& rhs)
+{
+    return lhs.row == rhs.row && lhs.col == rhs.col;
+}
+
+bool operator<(const coord& lhs, const coord& rhs)
+{
+    return lhs.row != rhs.row ? lhs.row < rhs.row : lhs.col < rhs.col;
+}
 
 std::ostream& operator<<(std::ostream& o, const coord& c)
 {
@@ -48,6 +60,13 @@ std::ostream& operator<<(std::ostream& o, const coord& c)
 
 /// Maze path.
 using path = std::list<coord>;
+
+std::ostream& operator<<(std::ostream& o, const path& p)
+{
+    for (const auto& coord : p)
+        std::cout << coord << ' ';
+    return std::cout << std::endl;
+}
 
 /// \return row and column deltas to move in the specified direction.
 std::pair<int, int> delta(direction d)
@@ -85,10 +104,10 @@ direction reverse(direction d)
     return right;
 }
 
-/// Maze room containing door directions and visit and path metadata.
+/// Maze room containing doors, exit and path data.
 class room {
 public:
-    room() : doors_(0), exit_(0),  path_(0), visited_(0) {}
+    room() : doors_(0), exit_(0), start_(0),  path_(0) {}
     room(const room&) = default;
     room& operator=(const room&) = default;
     ~room() = default;
@@ -99,46 +118,42 @@ public:
     bool exit() const { return exit_; }
     void start(bool start) { start_ = start; }
     bool start() const { return start_; }
-    void visited(bool visited) { visited_ = visited; }
-    bool visited() const { return visited_; }
     void path(bool path) { path_ = path; }
     bool path() const { return path_; }
 
 private:
-    unsigned int doors_:4;      /// Bitfield for doors.
-    unsigned int exit_:1;       /// Node is the exit.
-    unsigned int start_:1;      /// Node is the path start.
-    unsigned int path_:1;       /// Node on path.
-    unsigned int visited_:1;    /// Node visited.
+    unsigned int doors_:4;      /// Bitfield for room's doors.
+    unsigned int exit_:1;       /// The room is the exit.
+    unsigned int start_:1;      /// The room is the start of the path.
+    unsigned int path_:1;       /// The room is on the path.
 };
 
 /// A maze is an R(ows) by C(olumns) grid of rooms.
 template <size_t R, size_t C> using maze = std::array<std::array<room,C>, R>;
 
 // Forward declarations.
-template <size_t R, size_t C> path find_path_rec(maze<R, C>& m, const coord&);
 template <size_t R, size_t C> void foreach_room(maze<R, C>&, const std::function<void (room&)>&);
-template <size_t R, size_t C> void clear_path_and_visited(maze<R, C>&);
+template <size_t R, size_t C> void clear_path(maze<R, C>&);
 
 /// For all rooms.
 template <size_t R, size_t C>
-void foreach_room(maze<R, C>& m, const std::function<void (room&)>& f)
+void foreach(maze<R, C>& m, const std::function<void (room&)>& f)
 {
    for (size_t r = 0; r < R; ++r)
         for (size_t c = 0; c < C; ++c)
             f(m[r][c]);
 }
 
-/// Clear path membership and visited flags in every room in the maze.
+/// Clear maze path.
 template <size_t R, size_t C>
-void clear_path_and_visited(maze<R, C>& m)
+void clear_path(maze<R, C>& m)
 {
-    foreach_room(
+    foreach(
             m,
             [] (room& r) {
                 r.path(false);
                 r.start(false);
-                r.visited(false);
+                r.exit(false);
             });
 }
 
@@ -147,10 +162,11 @@ std::ostream& operator<<(std::ostream& os, const maze<R, C>& m)
 {
     using namespace std;
 
-    // For each row's rooms  ...
+    // For each row  ...
     for (size_t r = 0; r < R; ++r) {
-        // ... print up door/wall ...
+        // ... for each room ...
         for (size_t c = 0; c < C; ++c) {
+            // ... print up door/wall ...
             os << "+";
             os << (m[r][c].has_door(up) ? " " : "-");
             if (c == C - 1)
@@ -158,8 +174,9 @@ std::ostream& operator<<(std::ostream& os, const maze<R, C>& m)
         }
         os << endl;
 
-        // ... print left door/wall ...
+        // ... for each room ...
         for (size_t c = 0; c < C; ++c) {
+            // ... print left door/wall ...
             const auto& room = m[r][c];
 
             os << (room.has_door(left) ? " " : "|");
@@ -175,63 +192,15 @@ std::ostream& operator<<(std::ostream& os, const maze<R, C>& m)
             }
 
             if (c == C - 1)
-                os << "|";
+                os << "|";      // ... print right wall.
         }
         os << endl;
     }
 
-    // Maze's bottom wall.
-    for (size_t c = 0; c < C; ++c) {
+    // Bottom wall.
+    for (size_t c = 0; c < C; ++c)
         os << "+-";
-    }
-    os << "+" << endl;
-
-    return os;
-}
-
-/// Find a path to the exit starting at the specified room.
-///
-/// \note Recursive implementation.  Limited by call stack size.
-///
-/// \param maze
-/// \param current current/start room co-ordinates.
-/// \return the path to the exit from the specified start.
-template <size_t R, size_t C>
-path find_path(const maze<R, C>& m, const coord& current)
-{
-    auto copy = m;
-    auto path = find_path_rec(copy, current);
-    return path;
-}
-
-template <size_t R, size_t C>
-path find_path_rec(maze<R, C>& m, const coord& current)
-{
-    room& r = m[current.row][current.col];
-    r.visited(true);
-
-    if (r.exit())
-        return {current};                                   // Stop.
-
-    for (auto direction : {up, right, down, left}) {
-        if (!r.has_door(direction))
-            continue;
-
-        const auto d = delta(direction);
-        const coord next = {current.row + d.first, current.col + d.second};
-        const auto& next_room = m[next.row][next.col];
-
-        if (next_room.visited())
-            continue;                                       // Skip.
-
-        path p = find_path_rec(m, next);                    // Recurse.
-        if (!p.empty()) {
-            p.push_front(current);
-            return p;
-        }
-    }
-
-    return {};
+    return os << "+" << endl;
 }
 
 /// Mark the path.
