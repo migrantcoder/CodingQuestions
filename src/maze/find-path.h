@@ -1,6 +1,10 @@
 // vim: set ts=4 sw=4 tw=80 expandtab
 // Copyright 2015 Migrant Coder
 
+/// Find a path to the exit of a maze.
+///
+/// See README for problem and solution description.
+
 #pragma once
 
 #include <set>
@@ -111,9 +115,8 @@ path find_path_recursive_(
     else
         visited.insert(current);
 
-    if (current == exit) {
+    if (current == exit)
         return {current};                                           // Found, stop and pop.
-    }
 
     for (auto direction : {up, right, down, left}) {
         if (!room.has_door(direction))

@@ -1,0 +1,14 @@
+Find Anagrams
+
+Problem Statement
+
+Given a list of words, return only the words that are anagrams of other words in
+the list. Return them in the order they appear in the list. There are no
+duplicates
+
+Solution
+
+Words are canonicalized by sorting their letters. Thus the canonicalizations of
+anagrams are equal. Create a table of canonicalized word occurrence counts.
+Remove all members with a count less than 2 from the table. Filter out words
+from the original list who's conicalized version is not in the table.
