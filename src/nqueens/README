@@ -1,0 +1,26 @@
+N Queens
+
+Problem Definition
+
+A generalizeation of the 8 queens problem where 8 queens must be placed on an
+8x8 square chessboard such that no queen is able to take any other. Queens can
+move horizontally, vertically or diagonally.
+
+Representation
+
+The board is represented by an N dimensional array of rows. Each row is
+represented by a bitmap, specifically an unsigned integer of at least 2N bits.
+Rows and columns are 0 indexed. The Nth least significant bit of a row bitmap
+represents the 0th column. E.g. for N=8 the 8th least significant bit (the bit
+in position 7) represents column 0 and the least significant bit represents
+column 7.
+
+The 2N bits width requirement is for implementation convenience - it prevents
+bits from being dropped on left shifts when validating diagonals on the board.
+
+Solution
+
+The solution is implemented using recursive backtracking. To place a queen on
+the current row, a recursive call is made with a queen placed on each potential
+column on the row to attempt to place a queen on the next row. Each candidate
+queen placement is validated to ensure no currently placed queens conflict.
